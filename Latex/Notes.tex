@@ -1,0 +1,61 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{tikz, pgfplots}
+\pgfplotsset{compat=1.17}
+\usepackage[none]{hyphenat}
+\usepackage{hyperref}
+\hypersetup{pdfborder=0 0 0}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\makeatletter
+
+\newtheorem{thm}{Theorem}
+\numberwithin{thm}{section}
+\newtheorem{prop}{Proposition}
+\numberwithin{prop}{section}
+\newtheorem{obs}{Observation}
+\numberwithin{obs}{section}
+\numberwithin{equation}{section}
+\newtheorem{defin}{Definition}
+\numberwithin{defin}{section}
+\usepackage{multicol}
+\usepackage{float}
+\usepackage[margin=1.2in]{geometry}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage[caption=false]{subfig}
+\pagestyle{fancy}
+%\fancyhead[RO,LE]{\textbf{Differential geometry}}
+%\fancyhead[LO,RE]{Luca Morelli}
+
+\begin{document}
+
+\include{title.tex}
+
+\tableofcontents
+
+\include{Introduction.tex}
+\include{Phase transitions.tex}
+\include{Network.tex}
+\include{Implementation.tex}
+\include{Results.tex}
+\include{Conclusions.tex}
+
+
+\begin{thebibliography}{9}
+    \bibitem{Networkx}
+    Daniel A. Schult Aric A. Hagberg and Pieter J. Swart. “Exploring network structure,
+    dynamics, and function using NetworkX”. In: 2008, pp. 11–15.
+
+    \bibitem{ExactIsing}
+    Giuseppe Mussardo. \emph{Statistical field theory: an introduction to exactly solved models in
+    statistical physics}; 1st ed. Oxford graduate texts. New York, NY: Oxford Univ. Press, 2010.
+
+    \bibitem{Metropolis}
+    W. K. Hastings. Monte Carlo Sampling Methods Using Markov Chains and Their Applications. 1970. doi: https://doi.org/10.2307/2334940.
+    \end{thebibliography}
+\end{document}
