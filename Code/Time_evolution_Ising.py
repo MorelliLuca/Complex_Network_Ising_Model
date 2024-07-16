@@ -1,3 +1,9 @@
+# Simulation of the Ising model on Networks
+#
+# To run the following code you need to create the desire network as the 
+# atoms_networks object, all the variables of the simulation are initalized below.
+# At the end of the simulation graphs with the rieslts are produced.
+
 import networkx as nx
 from networkx.algorithms import approximation as approx
 import matplotlib.pyplot as plt
@@ -17,15 +23,14 @@ initial_thermalization_time = (
     40000000  # Steps used to thermalize the system after its generation
 )
 evolution_time = 600000  # Steps for evolution each time we change temperature
-number_of_averages = 3000  # Averages taken at the end of evolution_time
+number_of_averages = 3000  # Averages taken at the end of evolution_time for each temperature
 interval_of_averages = 100  # Step between each measure
 J = 50
 initial_temperature = 1
-maximum_temperature = 1000
+final_temperature = 1000
 temperature_step = 10
-atoms_to_remove = 0
-GRAPH_MEASURES = True
-
+atoms_to_remove = 0 # Atoms removed in the "Broken lattice" simulation 
+GRAPH_MEASURES = True # If true, the code will measure the graph proprieties of aligned spin netowrks
 
 type_of_simulation = "Herdos-Renyi (P=3/4)"  # Text to be added in title of graphs
 
@@ -41,6 +46,7 @@ THDM_MEASURES = {
     "Free energy": [],
 }
 
+# Store the only spins up netowrk measures
 UP_SPINS_MEASURES = {
     "Connected components": [],
     "giant component size": [],
@@ -51,6 +57,7 @@ UP_SPINS_MEASURES = {
     "Giant component node connectivity": [],
 }
 
+# Store the only spins down netowrk measures
 DOWN_SPINS_MEASURES = {
     "Connected components": [],
     "giant component size": [],
@@ -63,7 +70,6 @@ DOWN_SPINS_MEASURES = {
 
 
 ##FUNCTIONS##
-
 
 # Give spin to nodes
 def set_initial_spin(graph):
@@ -92,10 +98,10 @@ def draw(graph):
     )  # , labels=nx.get_node_attributes(graph,"Spin"))
 
 
-# Evaluate hamiltonian
+# Evaluate the energy
 def evaluate_hamiltonian(graph):
     H = 0
-    for edge in graph.edges():
+    for edge in graph.edges():  # cycles over the interacting atoms
         spin0 = graph.nodes[edge[0]]["Spin"]
         spin1 = graph.nodes[edge[1]]["Spin"]
         H -= J * (spin0 * spin1)
@@ -103,11 +109,11 @@ def evaluate_hamiltonian(graph):
 
 
 # Flip 1 random spin
-# Return variation of energy to be used in evolution
+# It returns variation of energy to be used in evolution
 def flip_spin(graph, temperature):
     rnd_spin = rng.integers(atoms_network.number_of_nodes())
     delta_energy = variation_hamiltonian(graph, rnd_spin)
-    # Decide if the flip occur
+    # Decide if the flip occurs
     if delta_energy < 0 or math.exp(-delta_energy / temperature) > rng.random():
         atoms_network.nodes[rnd_spin]["Spin"] *= -1
         return delta_energy
@@ -146,11 +152,6 @@ def evaluate_entropy(magnetization):
     )
 
 
-# Evaluate Mean field magnetization
-def estimate_critical_temperature(graph, _J):
-    return _J * graph.number_of_edges() / graph.number_of_nodes()
-
-
 # Return network with only atoms with specified spin
 def one_spin_network(spin, graph):
     new_graph = graph.copy()
@@ -169,11 +170,11 @@ def remove_different_nodes_from(graph, spins):
     return new_graph
 
 
-# Find critical temperture from cv
+# Find critical temperture as the maximum of a list of a variable (e.g. specific heat)
 def temperature_of_maximum(temperatures, thdm_variable):
     maximum = max(thdm_variable)
-    maximum_temperature_index = thdm_variable.index(maximum)
-    return temperatures[maximum_temperature_index]
+    temperature_index = thdm_variable.index(maximum)
+    return temperatures[temperature_index]
 
 
 # Remove random nodes
@@ -186,8 +187,8 @@ def remove_random_nodes(graph, number_of_nodes):
             removed_nodes.append(rnd_node)
 
 
-# Create more then neighbor neigbor interaction networks from lattices
-def nn_interaction_from_lattices(graph):
+# Create more then nearest neigbor interaction networks from lattices
+def mnn_interaction_from_lattices(graph):
     new_graph = graph.copy()
     for node in graph:
         for first_neighbor in graph.neighbors(node):
@@ -199,19 +200,19 @@ def nn_interaction_from_lattices(graph):
 
 ##CODE##
 
-# Generate graph <-- function
+# Generate the network on which the simulation runs
+# NOTE: lattices must undergo a convertion of thei indices
+#  from the position in the lattice to just progressive numeration
+
 # atoms_network = nx.convert_node_labels_to_integers(nx.grid_2d_graph(dimension_x,dimension_y,periodic = True), 0)
 # atoms_network = nx.convert_node_labels_to_integers(nx.grid_graph((dimension_x,dimension_y,dimension_z,dimension_z),periodic = False), 0)
 # atoms_network = nx.convert_node_labels_to_integers(nx.triangular_lattice_graph(dimension_x, dimension_y, periodic= True))
 atoms_network = nx.erdos_renyi_graph(dimension_x, 0.75)
-# atoms_network = nx.cycle_graph(dimension_x)
-# atoms_network = nx.path_graph(dimension_x)
 
-#atoms_network = nn_interaction_from_lattices(atoms_network)
 
+# Setting the network
+# atoms_network = mnn_interaction_from_lattices(atoms_network)
 set_initial_spin(atoms_network)
-
-# remove spins
 remove_random_nodes(atoms_network, atoms_to_remove)
 
 # First thermalization
@@ -222,7 +223,7 @@ for t in tqdm(range(initial_thermalization_time)):
 # Evolve at different temperatures
 print("-----THERMAL EVOLUTION-----")
 for temperature in tqdm(
-    range(initial_temperature, maximum_temperature, temperature_step)
+    range(initial_temperature, final_temperature, temperature_step)
 ):
     TEMPERATURE.append(temperature)
 
@@ -275,11 +276,12 @@ for temperature in tqdm(
             )  # New magnetization
 
         # Last iterations evolve the system in order to simulate one ensamble and then get averages
+        # Determine if in this step a measure should occur
         if (
             evolution_time - t <= number_of_averages * interval_of_averages
             and (t - number_of_averages * interval_of_averages) % interval_of_averages
             == 0
-        ):
+        ):  # Mesaures
             thdm_averages["Energy"] += system_energy / number_of_averages
             thdm_averages["Squared energy"] += (
                 system_energy * system_energy / number_of_averages
@@ -294,6 +296,7 @@ for temperature in tqdm(
                 evaluate_entropy(abs(system_magnetization)) / number_of_averages
             )
             if GRAPH_MEASURES == True:
+                # Slpit the network in spins up and down
                 spin_up = one_spin_network(1, atoms_network)
                 spin_down = one_spin_network(-1, atoms_network)
                 up_connected_compopnents = nx.number_connected_components(spin_up)
@@ -389,14 +392,11 @@ for temperature in tqdm(
             DOWN_SPINS_MEASURES[measure].append(down_spins_averages[measure])
 
 
-# Draw Graph
-T_c = estimate_critical_temperature(atoms_network, J)
+# Draw Graphs and print results
 T_c_from_cv = temperature_of_maximum(TEMPERATURE, THDM_MEASURES["Cv"])
 T_c_from_sus = temperature_of_maximum(TEMPERATURE, THDM_MEASURES["Susceptibility"])
 print(
-    "Mean field critical temperature: "
-    + str(T_c)
-    + "\nCv maximum critical temperature: "
+    "Cv maximum critical temperature: "
     + str(T_c_from_cv)
     + "\nchi maximum critical temperature: "
     + str(T_c_from_sus)
@@ -411,7 +411,7 @@ ax.set_ylabel("m", loc="top", rotation=0, fontsize=18)
 ax.plot(TEMPERATURE, THDM_MEASURES["Magnetization"], marker=".", linestyle="-")
 ax.grid(True)
 # ax.axvline(x=T_c, color='r', linestyle='--')
-# ax.text(T_c / maximum_temperature, -0.1, r'$T_c$', color='r', fontsize=12, transform = ax.transAxes)
+# ax.text(T_c / final_temperature, -0.1, r'$T_c$', color='r', fontsize=12, transform = ax.transAxes)
 
 ax = fig.add_subplot(2, 3, 2)
 ax.set_title("Energy")
@@ -420,7 +420,7 @@ ax.set_ylabel(r"$\frac{E}{N}$", loc="top", rotation=0, fontsize=18)
 ax.plot(TEMPERATURE, THDM_MEASURES["Energy"], marker=".", linestyle="-")
 ax.grid(True)
 # ax.axvline(x=T_c, color='r', linestyle='--')
-# ax.text(T_c / maximum_temperature, -0.1, r'$T_c$', color='r', fontsize=12, transform = ax.transAxes)
+# ax.text(T_c / final_temperature, -0.1, r'$T_c$', color='r', fontsize=12, transform = ax.transAxes)
 
 ax = fig.add_subplot(2, 3, 3)
 ax.set_title("Heat capacity")
@@ -430,7 +430,7 @@ ax.plot(TEMPERATURE, THDM_MEASURES["Cv"], marker=".", linestyle="-")
 ax.grid(True)
 ax.axvline(x=T_c_from_cv, color="r", linestyle="--")
 ax.text(
-    (T_c_from_cv - initial_temperature) / (maximum_temperature - initial_temperature),
+    (T_c_from_cv - initial_temperature) / (final_temperature - initial_temperature),
     -0.1,
     r"$T_c$",
     color="r",
@@ -446,7 +446,7 @@ ax.plot(TEMPERATURE, THDM_MEASURES["Susceptibility"], marker=".", linestyle="-")
 ax.grid(True)
 ax.axvline(x=T_c_from_sus, color="r", linestyle="--")
 ax.text(
-    (T_c_from_sus - initial_temperature) / (maximum_temperature - initial_temperature),
+    (T_c_from_sus - initial_temperature) / (final_temperature - initial_temperature),
     -0.1,
     r"$T_c$",
     color="r",
@@ -461,7 +461,7 @@ ax.set_ylabel(r"$\frac{S}{N}$", loc="top", rotation=0, fontsize=18)
 ax.plot(TEMPERATURE, THDM_MEASURES["Entropy"], marker=".", linestyle="-")
 ax.grid(True)
 # ax.axvline(x=T_c, color='r', linestyle='--')
-# ax.text(T_c / maximum_temperature, -0.1, r'$T_c$', color='r', fontsize=12, transform = ax.transAxes)
+# ax.text(T_c / final_temperature, -0.1, r'$T_c$', color='r', fontsize=12, transform = ax.transAxes)
 
 ax = fig.add_subplot(2, 3, 6)
 ax.set_title("Free energy")
@@ -470,7 +470,7 @@ ax.set_ylabel(r"$\frac{F}{N}$", loc="top", rotation=0, fontsize=18)
 ax.plot(TEMPERATURE, THDM_MEASURES["Free energy"], marker=".", linestyle="-")
 ax.grid(True)
 # ax.axvline(x=T_c, color='r', linestyle='--')
-# ax.text(T_c / maximum_temperature, -0.1, r'$T_c$', color='r', fontsize=12, transform = ax.transAxes)
+# ax.text(T_c / final_temperature, -0.1, r'$T_c$', color='r', fontsize=12, transform = ax.transAxes)
 
 fig.suptitle(
     "Simulated Ising model on " + type_of_simulation + " at different temperatures",
